@@ -14,7 +14,6 @@ import {
   AlertTriangle,
   CheckCircle,
   Activity,
-  ChevronRight,
   X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -22,11 +21,8 @@ import Sidebar from '@/components/Layout/Sidebar';
 import Header from '@/components/Layout/Header';
 import ActivityLogComponent from '@/components/UI/ActivityLog';
 import PasswordStrength from '@/components/UI/PasswordStrength';
-import { useSession } from '@/context/SessionContext';
 import { useVault } from '@/context/VaultContext';
-import { deriveKey } from '@/lib/crypto';
 
-// ─── Section wrapper ───────────────────────────────────────────────────────────
 function Section({
   icon: Icon,
   title,
@@ -66,9 +62,8 @@ function Section({
   );
 }
 
-// ─── Change password section ───────────────────────────────────────────────────
 function ChangePasswordSection() {
-  const { credentials, encryptionKey, setEncryptionKey } = useVault();
+  const { refreshCredentials } = useVault();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -79,39 +74,31 @@ function ChangePasswordSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (next !== confirm) { toast.error('New passwords do not match'); return; }
-    if (next.length < 8) { toast.error('New password must be at least 8 characters'); return; }
-    if (!encryptionKey) { toast.error('Encryption key not found. Please lock and unlock the vault.'); return; }
+    if (next !== confirm) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    if (next.length < 8) {
+      toast.error('New password must be at least 8 characters');
+      return;
+    }
 
     setIsLoading(true);
     try {
-      const oldKey = encryptionKey;
-      const newKey = deriveKey(next);
-
-      // credentials from VaultContext are already decrypted (plaintext).
-      // Just re-encrypt them with the new key — no need to decrypt first.
-      // Everything happens in the browser; the server only receives new ciphertext.
-      const { encrypt } = await import('@/lib/crypto');
-      const reEncryptedCredentials = credentials.map((cred) => ({
-        id: cred.id,
-        username: encrypt(cred.username, newKey),
-        password: encrypt(cred.password, newKey),
-        notes:    encrypt(cred.notes ?? '', newKey),
-      }));
-
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword: current, newPassword: next, reEncryptedCredentials }),
+        body: JSON.stringify({ currentPassword: current, newPassword: next }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      // Switch the in-memory key to the new one
-      setEncryptionKey(newKey);
-      toast.success('Master password changed! All credentials re-encrypted.');
+      await refreshCredentials();
+      toast.success('Master password changed successfully.');
       setSuccess(true);
-      setCurrent(''); setNext(''); setConfirm('');
+      setCurrent('');
+      setNext('');
+      setConfirm('');
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to change password');
@@ -128,7 +115,12 @@ function ChangePasswordSection() {
   };
 
   const EyeToggle = ({ show, toggle }: { show: boolean; toggle: () => void }) => (
-    <button type="button" onClick={toggle} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-secondary)' }}>
+    <button
+      type="button"
+      onClick={toggle}
+      className="absolute right-3 top-1/2 -translate-y-1/2"
+      style={{ color: 'var(--text-secondary)' }}
+    >
       {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
     </button>
   );
@@ -136,32 +128,61 @@ function ChangePasswordSection() {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div className="relative">
-        <input type={showCurrent ? 'text' : 'password'} value={current} onChange={e => setCurrent(e.target.value)} placeholder="Current master password" className={inputClass} style={inputStyle} />
-        <EyeToggle show={showCurrent} toggle={() => setShowCurrent(v => !v)} />
+        <input
+          type={showCurrent ? 'text' : 'password'}
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+          placeholder="Current master password"
+          className={inputClass}
+          style={inputStyle}
+        />
+        <EyeToggle show={showCurrent} toggle={() => setShowCurrent((v) => !v)} />
       </div>
       <div className="relative">
-        <input type={showNew ? 'text' : 'password'} value={next} onChange={e => setNext(e.target.value)} placeholder="New master password" className={inputClass} style={inputStyle} />
-        <EyeToggle show={showNew} toggle={() => setShowNew(v => !v)} />
+        <input
+          type={showNew ? 'text' : 'password'}
+          value={next}
+          onChange={(e) => setNext(e.target.value)}
+          placeholder="New master password"
+          className={inputClass}
+          style={inputStyle}
+        />
+        <EyeToggle show={showNew} toggle={() => setShowNew((v) => !v)} />
       </div>
       {next && <PasswordStrength password={next} />}
       <div className="relative">
-        <input type={showNew ? 'text' : 'password'} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Confirm new password" className={inputClass} style={inputStyle} />
-        <EyeToggle show={showNew} toggle={() => setShowNew(v => !v)} />
+        <input
+          type={showNew ? 'text' : 'password'}
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          placeholder="Confirm new password"
+          className={inputClass}
+          style={inputStyle}
+        />
+        <EyeToggle show={showNew} toggle={() => setShowNew((v) => !v)} />
       </div>
       <motion.button
-        whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.98 }}
         type="submit"
         disabled={isLoading || !current || !next || !confirm}
         className="w-full py-2.5 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50"
         style={{ background: success ? '#22c55e' : 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
       >
-        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : success ? <><CheckCircle className="w-4 h-4" /> Changed!</> : 'Change Master Password'}
+        {isLoading ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : success ? (
+          <>
+            <CheckCircle className="w-4 h-4" /> Changed!
+          </>
+        ) : (
+          'Change Master Password'
+        )}
       </motion.button>
     </form>
   );
 }
 
-// ─── Auto-lock section ─────────────────────────────────────────────────────────
 function AutoLockSection() {
   const [selected, setSelected] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -206,14 +227,46 @@ function AutoLockSection() {
   );
 }
 
-// ─── Export section ────────────────────────────────────────────────────────────
 function ExportSection() {
+  const { credentials } = useVault();
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<'all' | 'team' | 'credential'>('all');
+  const [selectedTeamId, setSelectedTeamId] = useState('');
+  const [selectedCredentialId, setSelectedCredentialId] = useState('');
+
+  const teamOptions = Array.from(
+    new Map(
+      credentials
+        .filter((c) => c.scope === 'team' && c.teamId && c.teamName)
+        .map((c) => [c.teamId as string, c.teamName as string])
+    ).entries()
+  ).map(([id, name]) => ({ id, name }));
 
   const handleExport = async () => {
+    if (mode === 'team' && !selectedTeamId) {
+      toast.error('Please select a team to export');
+      return;
+    }
+
+    if (mode === 'credential' && !selectedCredentialId) {
+      toast.error('Please select a credential to export');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const res = await fetch('/api/export');
+      const body =
+        mode === 'team'
+          ? { mode, teamId: selectedTeamId }
+          : mode === 'credential'
+            ? { mode, credentialId: selectedCredentialId }
+            : { mode: 'all' };
+
+      const res = await fetch('/api/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
       if (!res.ok) throw new Error('Export failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -233,10 +286,67 @@ function ExportSection() {
   return (
     <div className="space-y-3">
       <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-        Export your vault as an encrypted JSON file. Credential fields remain AES-256 encrypted in the export — only someone with your master password can decrypt them.
+        Export everything you can access, one team, or a single credential.
       </p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        {([
+          { id: 'all', label: 'All access' },
+          { id: 'team', label: 'One team' },
+          { id: 'credential', label: 'One credential' },
+        ] as const).map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => setMode(option.id)}
+            className="py-2.5 px-4 rounded-xl text-sm font-medium transition-colors"
+            style={{
+              background: mode === option.id ? 'rgba(99,102,241,0.2)' : 'var(--card)',
+              color: mode === option.id ? '#6366f1' : 'var(--text-secondary)',
+              border: `1px solid ${mode === option.id ? 'rgba(99,102,241,0.4)' : 'var(--border)'}`,
+            }}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'team' && (
+        <select
+          value={selectedTeamId}
+          onChange={(e) => setSelectedTeamId(e.target.value)}
+          className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none"
+          style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+        >
+          <option value="">Select team</option>
+          {teamOptions.map((team) => (
+            <option key={team.id} value={team.id}>
+              {team.name}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {mode === 'credential' && (
+        <select
+          value={selectedCredentialId}
+          onChange={(e) => setSelectedCredentialId(e.target.value)}
+          className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none"
+          style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+        >
+          <option value="">Select credential</option>
+          {credentials
+            .filter((credential) => credential.scope === 'personal')
+            .map((credential) => (
+            <option key={credential.id} value={credential.id}>
+              {credential.name}
+            </option>
+          ))}
+        </select>
+      )}
+
       <motion.button
-        whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.98 }}
         type="button"
         onClick={handleExport}
         disabled={isLoading}
@@ -250,7 +360,6 @@ function ExportSection() {
   );
 }
 
-// ─── Danger zone section ───────────────────────────────────────────────────────
 function DangerZoneSection() {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
@@ -285,7 +394,8 @@ function DangerZoneSection() {
           Permanently delete all credentials and your vault. This action cannot be undone.
         </p>
         <motion.button
-          whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
           type="button"
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium"
@@ -296,7 +406,6 @@ function DangerZoneSection() {
         </motion.button>
       </div>
 
-      {/* Confirmation modal */}
       <AnimatePresence>
         {showModal && (
           <motion.div
@@ -334,13 +443,13 @@ function DangerZoneSection() {
                 <input
                   type={showPwd ? 'text' : 'password'}
                   value={confirmPwd}
-                  onChange={e => setConfirmPwd(e.target.value)}
+                  onChange={(e) => setConfirmPwd(e.target.value)}
                   placeholder="Enter master password"
                   className="w-full px-4 py-2.5 pr-10 rounded-xl text-sm focus:outline-none"
                   style={{ background: 'var(--card)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--text-primary)' }}
                   autoFocus
                 />
-                <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-secondary)' }}>
+                <button type="button" onClick={() => setShowPwd((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-secondary)' }}>
                   {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -367,7 +476,6 @@ function DangerZoneSection() {
   );
 }
 
-// ─── Main Settings Page ────────────────────────────────────────────────────────
 export default function SettingsPage() {
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>

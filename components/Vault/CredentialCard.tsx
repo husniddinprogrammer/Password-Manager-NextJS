@@ -68,11 +68,12 @@ export default function CredentialCard({ credential, onDelete }: CredentialCardP
     setIsDeleting(true);
     try {
       const res = await fetch(`/api/credentials/${credential.id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Delete failed');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Delete failed');
       toast.success(`"${credential.name}" deleted`);
       onDelete(credential.id);
-    } catch {
-      toast.error('Failed to delete');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete');
     } finally {
       setIsDeleting(false);
     }
@@ -80,6 +81,10 @@ export default function CredentialCard({ credential, onDelete }: CredentialCardP
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!credential.canEdit) {
+      toast.error('You can view this credential but cannot edit it.');
+      return;
+    }
     router.push(`/vault/edit/${credential.id}`);
   };
 
@@ -234,22 +239,29 @@ export default function CredentialCard({ credential, onDelete }: CredentialCardP
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleEdit}
+          disabled={!credential.canEdit}
           className="flex-1 py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
-          style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}
+          style={{
+            background: credential.canEdit ? 'rgba(99,102,241,0.1)' : 'rgba(148,163,184,0.12)',
+            color: credential.canEdit ? '#6366f1' : 'var(--text-secondary)',
+          }}
         >
           <Edit className="w-3.5 h-3.5" />
-          Edit
+          {credential.canEdit ? 'Edit' : 'View only'}
         </motion.button>
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleDelete}
-          disabled={isDeleting}
+          disabled={isDeleting || !credential.canEdit}
           className="flex-1 py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
-          style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
+          style={{
+            background: credential.canEdit ? 'rgba(239,68,68,0.1)' : 'rgba(148,163,184,0.12)',
+            color: credential.canEdit ? '#ef4444' : 'var(--text-secondary)',
+          }}
         >
           <Trash2 className="w-3.5 h-3.5" />
-          {isDeleting ? 'Deleting...' : 'Delete'}
+          {!credential.canEdit ? 'No access' : isDeleting ? 'Deleting...' : 'Delete'}
         </motion.button>
       </div>
     </motion.div>

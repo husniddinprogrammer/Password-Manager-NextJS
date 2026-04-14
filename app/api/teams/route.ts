@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       createdAt: t.createdAt,
       ownerId: t.ownerId,
       isOwner: t.ownerId === session.userId,
-      myRole: t.ownerId === session.userId ? 'owner' : (t.members[0]?.role ?? 'member'),
+      myRole: t.ownerId === session.userId ? 'OWNER' : (t.members[0]?.role ?? 'MEMBER'),
       _count: t._count,
     }));
 
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         description: description?.trim() || null,
         ownerId: session.userId,
         members: {
-          create: { userId: session.userId, role: 'owner' },
+          create: { userId: session.userId, role: 'OWNER' },
         },
       },
     });

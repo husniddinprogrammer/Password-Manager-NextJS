@@ -193,17 +193,40 @@ export default function TeamsPage() {
                 <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#6366f1' }} />
               </div>
             ) : teams.length === 0 ? (
-              <div className="text-center py-16">
-                <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: 'rgba(99,102,241,0.1)' }}
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <motion.div
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+                  className="mb-6"
                 >
-                  <Users className="w-7 h-7" style={{ color: '#6366f1' }} />
-                </div>
-                <p className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>No teams yet</p>
-                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  Create a team to share credentials with your colleagues
+                  <div
+                    className="w-24 h-24 rounded-3xl flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))',
+                      border: '1px solid rgba(99,102,241,0.2)',
+                    }}
+                  >
+                    <Users className="w-12 h-12" style={{ color: '#6366f1' }} />
+                  </div>
+                </motion.div>
+
+                <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
+                  No teams yet
+                </h2>
+                <p className="text-sm mb-8 max-w-xs" style={{ color: 'var(--text-secondary)' }}>
+                  Create your first team to start sharing credentials with your colleagues.
                 </p>
+
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowCreate(true)}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white"
+                  style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add your first team
+                </motion.button>
               </div>
             ) : (
               <div className="space-y-3">

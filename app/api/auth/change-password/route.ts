@@ -3,21 +3,13 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
 
-interface ReEncryptedCredential {
-  id: string;
-  username: string;
-  password: string;
-  notes: string;
-}
-
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth(request);
     const body = await request.json();
-    const { currentPassword, newPassword, reEncryptedCredentials } = body as {
+    const { currentPassword, newPassword } = body as {
       currentPassword?: string;
       newPassword?: string;
-      reEncryptedCredentials?: ReEncryptedCredential[];
     };
 
     if (!currentPassword || !newPassword) {
@@ -46,26 +38,11 @@ export async function POST(request: NextRequest) {
 
     const newHash = await bcrypt.hash(newPassword, 12);
 
-    // Run everything in a transaction so it's atomic:
-    // either master hash + all re-encrypted credentials update together, or nothing changes.
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: session.userId },
         data: { masterHash: newHash },
       });
-
-      if (reEncryptedCredentials && reEncryptedCredentials.length > 0) {
-        for (const cred of reEncryptedCredentials) {
-          await tx.credential.updateMany({
-            where: { id: cred.id, userId: session.userId },
-            data: {
-              username: cred.username,
-              password: cred.password,
-              notes: cred.notes,
-            },
-          });
-        }
-      }
 
       await tx.activityLog.create({
         data: {

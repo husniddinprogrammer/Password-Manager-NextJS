@@ -14,7 +14,7 @@ interface TeamMemberItem {
   id: string;
   teamId: string;
   userId: string;
-  role: string;
+  role: 'OWNER' | 'MEMBER';
   joinedAt: string;
   user: { id: string; username: string | null; displayName: string | null; email: string | null };
 }
@@ -26,7 +26,7 @@ interface TeamDetail {
   createdAt: string;
   ownerId: string;
   isOwner: boolean;
-  myRole: string;
+  myRole: 'OWNER' | 'MEMBER';
   members: TeamMemberItem[];
   _count: { credentials: number };
 }
@@ -376,9 +376,9 @@ export default function TeamDetailPage() {
                               Owner
                             </span>
                           )}
-                          {!isTeamOwner && m.role === 'admin' && (
+                          {!isTeamOwner && m.role === 'MEMBER' && (
                             <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}>
-                              Admin
+                              Member
                             </span>
                           )}
                         </div>

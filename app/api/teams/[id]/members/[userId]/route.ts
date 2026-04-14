@@ -61,7 +61,7 @@ export async function PATCH(
 
     const updated = await prisma.teamMember.update({
       where: { teamId_userId: { teamId, userId: targetUserId } },
-      data: { role },
+      data: { role: role === 'OWNER' ? 'OWNER' : 'MEMBER' },
       include: {
         user: { select: { id: true, username: true, displayName: true, email: true } },
       },

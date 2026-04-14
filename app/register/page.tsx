@@ -27,10 +27,63 @@ function PasswordRule({ met, text }: { met: boolean; text: string }) {
   );
 }
 
+type RegisterFormState = {
+  displayName: string;
+  username: string;
+  email: string;
+  password: string;
+  confirm: string;
+};
+
+type RegisterErrors = Partial<RegisterFormState & { general: string }>;
+
+function Field({
+  label,
+  name,
+  type = 'text',
+  placeholder,
+  value,
+  error,
+  onChange,
+}: {
+  label: string;
+  name: keyof RegisterFormState;
+  type?: string;
+  placeholder: string;
+  value: string;
+  error?: string;
+  onChange: (key: keyof RegisterFormState, value: string) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+        {label}
+      </label>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={(e) => onChange(name, e.target.value)}
+        placeholder={placeholder}
+        autoComplete="off"
+        className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors"
+        style={{
+          background: 'var(--card)',
+          border: `1px solid ${error ? '#ef4444' : 'var(--border)'}`,
+          color: 'var(--text-primary)',
+        }}
+      />
+      {error && (
+        <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{error}</p>
+      )}
+    </div>
+  );
+}
+
 export default function RegisterPage() {
   const { register, isLoading } = useSession();
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<RegisterFormState>({
     displayName: '',
     username: '',
     email: '',
@@ -38,12 +91,12 @@ export default function RegisterPage() {
     confirm: '',
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<Partial<typeof form & { general: string }>>({});
+  const [errors, setErrors] = useState<RegisterErrors>({});
   const [shaking, setShaking] = useState(false);
 
-  const set = (key: keyof typeof form, value: string) => {
+  const set = (key: keyof RegisterFormState, value: string) => {
     setForm((p) => ({ ...p, [key]: value }));
-    if (errors[key as keyof typeof errors]) {
+    if (errors[key]) {
       setErrors((p) => ({ ...p, [key]: undefined }));
     }
   };
@@ -92,28 +145,6 @@ export default function RegisterPage() {
     color: 'var(--text-primary)',
   });
 
-  const Field = ({ label, name, type = 'text', placeholder, extra }: {
-    label: string; name: keyof typeof form; type?: string; placeholder: string; extra?: React.ReactNode;
-  }) => (
-    <div>
-      <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-        {label}
-      </label>
-      <input
-        type={type}
-        value={form[name]}
-        onChange={(e) => set(name, e.target.value)}
-        placeholder={placeholder}
-        autoComplete="off"
-        className={inputClass}
-        style={inputStyle(errors[name])}
-      />
-      {errors[name] && (
-        <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{errors[name]}</p>
-      )}
-      {extra}
-    </div>
-  );
 
   return (
     <div
@@ -177,13 +208,31 @@ export default function RegisterPage() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-3">
-              <Field label="Display Name" name="displayName" placeholder="Your name" />
+              <Field
+                label="Display Name"
+                name="displayName"
+                placeholder="Your name"
+                value={form.displayName}
+                error={errors.displayName}
+                onChange={set}
+              />
               <Field
                 label="Username"
                 name="username"
                 placeholder="e.g. john_doe"
+                value={form.username}
+                error={errors.username}
+                onChange={set}
               />
-              <Field label="Email" name="email" type="email" placeholder="you@example.com" />
+              <Field
+                label="Email"
+                name="email"
+                type="email"
+                placeholder="you@example.com"
+                value={form.email}
+                error={errors.email}
+                onChange={set}
+              />
 
               {/* Password with requirements */}
               <div>

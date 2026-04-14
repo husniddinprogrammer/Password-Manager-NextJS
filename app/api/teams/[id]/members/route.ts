@@ -45,7 +45,7 @@ export async function POST(
   try {
     const session = await requireAuth(request);
     const { id: teamId } = await params;
-    const { identifier, role = 'member' } = await request.json() as { identifier?: string; role?: string };
+    const { identifier, role = 'MEMBER' } = await request.json() as { identifier?: string; role?: string };
 
     if (!identifier?.trim()) {
       return NextResponse.json({ error: 'Username or email is required' }, { status: 400 });
@@ -82,7 +82,7 @@ export async function POST(
     }
 
     const member = await prisma.teamMember.create({
-      data: { teamId, userId: targetUser.id, role },
+      data: { teamId, userId: targetUser.id, role: role === 'OWNER' ? 'OWNER' : 'MEMBER' },
       include: {
         user: { select: { id: true, username: true, displayName: true, email: true } },
       },

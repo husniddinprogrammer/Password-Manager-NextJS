@@ -9,7 +9,6 @@ import React, {
   useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { deriveKey } from '@/lib/crypto';
 import { UserInfo } from '@/lib/types';
 import { useVault } from './VaultContext';
 
@@ -31,7 +30,7 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { setEncryptionKey, refreshCredentials } = useVault();
+  const { refreshCredentials } = useVault();
 
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -60,10 +59,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const lock = useCallback(() => {
     clearLockTimer();
-    setEncryptionKey(null);
+    sessionStorage.removeItem('vault-unlocked');
     setIsUnlocked(false);
     router.push('/');
-  }, [clearLockTimer, setEncryptionKey, router]);
+  }, [clearLockTimer, router]);
 
   // ── logout (clear everything) ────────────────────────────────────────────
 
@@ -72,12 +71,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch { /* ignore */ }
-    setEncryptionKey(null);
+    sessionStorage.removeItem('vault-unlocked');
     setIsUnlocked(false);
     setIsAuthenticated(false);
     setUser(null);
     router.push('/login');
-  }, [clearLockTimer, setEncryptionKey, router]);
+  }, [clearLockTimer, router]);
 
   // ── unlock (lock screen: re-derive key, already have JWT) ─────────────────
 
@@ -93,8 +92,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Unlock failed');
 
-        const key = deriveKey(masterPassword);
-        setEncryptionKey(key);
+        sessionStorage.setItem('vault-unlocked', 'true');
         setIsUnlocked(true);
         setLastActivity(Date.now());
         resetLockTimer(lock);
@@ -104,7 +102,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     },
-    [setEncryptionKey, refreshCredentials, resetLockTimer, lock, router]
+    [refreshCredentials, resetLockTimer, lock, router]
   );
 
   // ── login (full auth + key derivation) ───────────────────────────────────
@@ -124,8 +122,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setUser(data.user as UserInfo);
         setIsAuthenticated(true);
 
-        const key = deriveKey(masterPassword);
-        setEncryptionKey(key);
+        sessionStorage.setItem('vault-unlocked', 'true');
         setIsUnlocked(true);
         setLastActivity(Date.now());
         resetLockTimer(lock);
@@ -135,7 +132,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     },
-    [setEncryptionKey, refreshCredentials, resetLockTimer, lock, router]
+    [refreshCredentials, resetLockTimer, lock, router]
   );
 
   // ── register (create account + auto-login) ────────────────────────────────
@@ -155,8 +152,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setUser(data.user as UserInfo);
         setIsAuthenticated(true);
 
-        const key = deriveKey(masterPassword);
-        setEncryptionKey(key);
+        sessionStorage.setItem('vault-unlocked', 'true');
         setIsUnlocked(true);
         setLastActivity(Date.now());
         resetLockTimer(lock);
@@ -165,7 +161,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     },
-    [setEncryptionKey, resetLockTimer, lock, router]
+    [resetLockTimer, lock, router]
   );
 
   // ── on mount: restore session if JWT + sessionStorage key exist ───────────
@@ -185,8 +181,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setIsAuthenticated(true);
         setUser(data.user as UserInfo);
 
-        const storedKey = sessionStorage.getItem('vk');
-        if (storedKey) {
+        const unlocked = sessionStorage.getItem('vault-unlocked');
+        if (unlocked) {
           setIsUnlocked(true);
           resetLockTimer(lock);
           await refreshCredentials();

@@ -6,14 +6,11 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import Sidebar from '@/components/Layout/Sidebar';
 import CredentialForm from '@/components/Forms/CredentialForm';
-import { useVault } from '@/context/VaultContext';
 import { CredentialFormData } from '@/lib/types';
-import { decryptCredentialFields } from '@/lib/crypto';
 
 export default function EditCredentialPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { encryptionKey } = useVault();
   const [initialData, setInitialData] = useState<Partial<CredentialFormData> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -22,25 +19,21 @@ export default function EditCredentialPage() {
     const load = async () => {
       try {
         const res = await fetch(`/api/credentials/${params.id}`);
-        if (!res.ok) throw new Error('Credential not found');
-        const { data } = await res.json();
+        const payload = await res.json();
+        if (!res.ok) throw new Error(payload.error || 'Credential not found');
+        const data = payload.data;
 
-        if (!encryptionKey) {
-          setError('No encryption key. Please unlock the vault again.');
+        if (data.canEdit === false) {
+          setError('You can view this credential but cannot edit it.');
           return;
         }
-
-        const decrypted = decryptCredentialFields(
-          { username: data.username, password: data.password, notes: data.notes },
-          encryptionKey
-        );
 
         setInitialData({
           name: data.name,
           url: data.url || '',
-          username: decrypted.username,
-          password: decrypted.password,
-          notes: decrypted.notes || '',
+          username: data.username,
+          password: data.password,
+          notes: data.notes || '',
           category: data.category,
           tags: data.tags || [],
         });
@@ -51,7 +44,7 @@ export default function EditCredentialPage() {
       }
     };
     load();
-  }, [params.id, encryptionKey]);
+  }, [params.id]);
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>

@@ -23,6 +23,7 @@ export interface Credential {
   url?: string | null;
   username: string;
   password: string;
+  passwordHash?: string | null;
   notes?: string | null;
   category: string;
   tags: string[];
@@ -38,6 +39,8 @@ export interface DecryptedCredential extends Omit<Credential, 'username' | 'pass
   notes: string | null;
   isReused?: boolean;
   teamName?: string | null;
+  canEdit?: boolean;
+  strength?: number;
 }
 
 export interface ActivityLog {
@@ -121,7 +124,7 @@ export interface TeamMember {
   id: string;
   teamId: string;
   userId: string;
-  role: string;
+  role: 'OWNER' | 'MEMBER';
   joinedAt: Date;
   user?: Pick<UserInfo, 'id' | 'username' | 'displayName' | 'email'>;
 }

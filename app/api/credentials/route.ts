@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
+import zxcvbn from 'zxcvbn';
+import {
+  decryptCredentialFields,
+  encryptCredentialFields,
+  passwordFingerprint,
+} from '@/lib/server/credential-crypto';
+import {
+  canManageCredential,
+  getTeamAccess,
+} from '@/lib/server/credential-permissions';
+
+function getStrengthScore(password: string): number {
+  return zxcvbn(password).score;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,13 +40,49 @@ export async function GET(request: NextRequest) {
       orderBy: { updatedAt: 'desc' },
     });
 
-    const result = credentials.map((c) => ({
-      ...c,
-      teamName: c.team?.name ?? null,
-      team: undefined,
-    }));
+    const result = await Promise.all(
+      credentials.map(async (c) => {
+        const decrypted = decryptCredentialFields({
+          username: c.username,
+          password: c.password,
+          notes: c.notes,
+        });
 
-    return NextResponse.json({ data: result });
+        let canEdit = c.userId === session.userId;
+        if (c.scope === 'team' && c.teamId) {
+          const access = await getTeamAccess(c.teamId, session.userId);
+          canEdit = !!access && canManageCredential(access.role);
+        }
+
+        return {
+          ...c,
+          ...decrypted,
+          teamName: c.team?.name ?? null,
+          team: undefined,
+          canEdit,
+          strength: decrypted.password ? getStrengthScore(decrypted.password) : undefined,
+        };
+      })
+    );
+
+    const scopedCounts = new Map<string, number>();
+    result.forEach((c) => {
+      if (!c.passwordHash) return;
+      const scopeKey = c.scope === 'team' && c.teamId ? `team:${c.teamId}` : `user:${c.userId}`;
+      const key = `${scopeKey}:${c.passwordHash}`;
+      scopedCounts.set(key, (scopedCounts.get(key) ?? 0) + 1);
+    });
+
+    const withReuse = result.map((c) => {
+      const scopeKey = c.scope === 'team' && c.teamId ? `team:${c.teamId}` : `user:${c.userId}`;
+      const key = c.passwordHash ? `${scopeKey}:${c.passwordHash}` : '';
+      return {
+        ...c,
+        isReused: !!(c.passwordHash && (scopedCounts.get(key) ?? 0) > 1),
+      };
+    });
+
+    return NextResponse.json({ data: withReuse });
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -66,27 +116,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const strength = getStrengthScore(password);
+    if (strength < 2) {
+      return NextResponse.json(
+        { error: 'Password is too weak', strength },
+        { status: 400 }
+      );
+    }
+
     const credScope = scope === 'team' && teamId ? 'team' : 'personal';
 
-    // For team credentials, verify user is a member
+    let teamAccess: Awaited<ReturnType<typeof getTeamAccess>> = null;
     if (credScope === 'team' && teamId) {
-      const membership = await prisma.teamMember.findUnique({
-        where: { teamId_userId: { teamId, userId: session.userId } },
-      });
-      const team = await prisma.team.findUnique({ where: { id: teamId } });
-      if (!membership && team?.ownerId !== session.userId) {
-        return NextResponse.json({ error: 'Not a member of this team' }, { status: 403 });
+      teamAccess = await getTeamAccess(teamId, session.userId);
+      if (!teamAccess || !canManageCredential(teamAccess.role)) {
+        return NextResponse.json(
+          { error: 'You do not have permission to create team credentials' },
+          { status: 403 }
+        );
       }
     }
+
+    const encrypted = encryptCredentialFields({
+      username,
+      password,
+      notes: notes || null,
+    });
+    const passwordHash = passwordFingerprint(password);
+
+    const reusedCount = await prisma.credential.count({
+      where: {
+        passwordHash,
+        ...(credScope === 'team' && teamId
+          ? { teamId, scope: 'team' }
+          : { userId: session.userId, scope: 'personal' }),
+      },
+    });
 
     const credential = await prisma.credential.create({
       data: {
         userId: session.userId,
         name,
         url: url || null,
-        username,
-        password,
-        notes: notes || null,
+        username: encrypted.username,
+        password: encrypted.password,
+        passwordHash,
+        notes: encrypted.notes,
         category: category || 'General',
         tags: tags || [],
         scope: credScope,
@@ -103,7 +178,18 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ data: credential }, { status: 201 });
+    return NextResponse.json(
+      {
+        data: {
+          ...credential,
+          ...decryptCredentialFields(credential),
+          isReused: reusedCount > 0,
+          canEdit: credScope === 'team' ? !!teamAccess && canManageCredential(teamAccess.role) : true,
+          strength,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -27,7 +27,7 @@ export default function LockScreen() {
   useEffect(() => {
     const init = async () => {
       // If key already in sessionStorage → already unlocked, go to vault
-      if (sessionStorage.getItem('vk')) {
+      if (sessionStorage.getItem('vault-unlocked')) {
         router.replace('/vault');
         return;
       }

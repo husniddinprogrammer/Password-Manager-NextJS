@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Shield, Loader2 } from 'lucide-react';
 import { useSession } from '@/context/SessionContext';
-import { deriveKey } from '@/lib/crypto';
 
 interface UnlockFormProps {
   isSetup: boolean;
@@ -17,14 +16,18 @@ export default function UnlockForm({ isSetup }: UnlockFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [shaking, setShaking] = useState(false);
-  const [autoLockMinutes, setAutoLockMinutes] = useState(15);
+  const [autoLockMinutes] = useState(() => {
+    if (typeof window === 'undefined') return 15;
+
+    const valid = [5, 15, 30, 60];
+    const saved = parseInt(sessionStorage.getItem('autoLockMinutes') ?? '', 10);
+    return valid.includes(saved) ? saved : 15;
+  });
 
   useEffect(() => {
     const VALID = [5, 15, 30, 60];
     const saved = parseInt(sessionStorage.getItem('autoLockMinutes') ?? '', 10);
-    const value = VALID.includes(saved) ? saved : 15;
     if (!VALID.includes(saved)) sessionStorage.setItem('autoLockMinutes', '15');
-    setAutoLockMinutes(value);
   }, []);
 
   const triggerShake = () => {

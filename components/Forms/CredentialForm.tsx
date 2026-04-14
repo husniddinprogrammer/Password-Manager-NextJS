@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Wand2, X, Plus, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { CREDENTIAL_CATEGORIES, CredentialFormData } from '@/lib/types';
-import { encryptCredentialFields } from '@/lib/crypto';
 import { useVault } from '@/context/VaultContext';
 import PasswordStrength from '@/components/UI/PasswordStrength';
 import PasswordGenerator from './PasswordGenerator';
@@ -91,7 +90,7 @@ function FaviconPreview({ url }: { url: string }) {
 
 export default function CredentialForm({ initialData, credentialId, mode, initialScope, initialTeamId }: CredentialFormProps) {
   const router = useRouter();
-  const { encryptionKey, addActivityLog, refreshCredentials } = useVault();
+  const { addActivityLog, refreshCredentials } = useVault();
   const [form, setForm] = useState<CredentialFormData>({ ...EMPTY_FORM, ...initialData });
   const [showPassword, setShowPassword] = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
@@ -139,21 +138,16 @@ export default function CredentialForm({ initialData, credentialId, mode, initia
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate() || !encryptionKey) return;
+    if (!validate()) return;
 
     setIsSubmitting(true);
     try {
-      const encrypted = encryptCredentialFields(
-        { username: form.username, password: form.password, notes: form.notes },
-        encryptionKey
-      );
-
       const payload = {
         name: form.name.trim(),
         url: form.url.trim() || undefined,
-        username: encrypted.username,
-        password: encrypted.password,
-        notes: encrypted.notes || undefined,
+        username: form.username,
+        password: form.password,
+        notes: form.notes || undefined,
         category: form.category,
         tags: form.tags,
         scope,

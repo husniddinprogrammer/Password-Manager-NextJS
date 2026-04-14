@@ -27,6 +27,7 @@ model Credential {
   url       String?
   username  String
   password  String
+  passwordHash String?
   notes     String?
   category  String   @default("General")
   tags      String[]
@@ -63,10 +64,15 @@ model TeamMember {
   id       String   @id @default(cuid())
   teamId   String
   userId   String
-  role     String   @default("member")
+  role     TeamRole @default(MEMBER)
   joinedAt DateTime @default(now())
   team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, userId])
+}
+
+enum TeamRole {
+  OWNER
+  MEMBER
 }

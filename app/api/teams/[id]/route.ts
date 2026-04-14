@@ -45,7 +45,7 @@ export async function GET(
       data: {
         ...full,
         isOwner,
-        myRole: isOwner ? 'owner' : (team.members.find((m) => m.userId === session.userId)?.role ?? 'member'),
+        myRole: isOwner ? 'OWNER' : (team.members.find((m) => m.userId === session.userId)?.role ?? 'MEMBER'),
       },
     });
   } catch (error) {
