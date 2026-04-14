@@ -12,7 +12,6 @@ export interface User {
   email: string | null;
   displayName: string | null;
   role: string;
-  masterHash: string;
   createdAt: Date;
 }
 
@@ -62,7 +61,8 @@ export type ActivityAction =
   | 'VAULT_UNLOCKED'
   | 'VAULT_LOCKED'
   | 'MASTER_PASSWORD_CHANGED'
-  | 'VAULT_EXPORTED';
+  | 'VAULT_EXPORTED'
+  | 'VAULT_IMPORTED';
 
 export type CredentialCategory =
   | 'General'

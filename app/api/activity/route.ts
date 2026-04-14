@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
+import { ActivityAction } from '@/lib/types';
+
+const ALLOWED_ACTIONS = new Set<ActivityAction>([
+  'CREDENTIAL_CREATED',
+  'CREDENTIAL_UPDATED',
+  'CREDENTIAL_DELETED',
+  'CREDENTIAL_VIEWED',
+  'PASSWORD_COPIED',
+  'USERNAME_COPIED',
+  'VAULT_UNLOCKED',
+  'VAULT_LOCKED',
+  'MASTER_PASSWORD_CHANGED',
+  'VAULT_EXPORTED',
+  'VAULT_IMPORTED',
+]);
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,6 +49,10 @@ export async function POST(request: NextRequest) {
 
     if (!action) {
       return NextResponse.json({ error: 'action is required' }, { status: 400 });
+    }
+
+    if (!ALLOWED_ACTIONS.has(action as ActivityAction)) {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
     const log = await prisma.activityLog.create({

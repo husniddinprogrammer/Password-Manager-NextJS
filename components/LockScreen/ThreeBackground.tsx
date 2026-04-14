@@ -115,6 +115,8 @@ export default function ThreeBackground() {
       cancelAnimationFrame(frameId);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
+      particles.forEach((p) => (p.material as THREE.Material).dispose());
+      geometry.dispose();
       renderer.dispose();
       if (mount.contains(renderer.domElement)) {
         mount.removeChild(renderer.domElement);

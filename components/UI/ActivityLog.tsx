@@ -11,6 +11,7 @@ import {
   Lock,
   Unlock,
   Download,
+  Upload,
   Key,
   Loader2,
 } from 'lucide-react';
@@ -43,6 +44,7 @@ const ACTION_CONFIG: Record<
   VAULT_LOCKED: { icon: Lock, label: 'Vault locked', color: '#ef4444' },
   MASTER_PASSWORD_CHANGED: { icon: Key, label: 'Password changed', color: '#f59e0b' },
   VAULT_EXPORTED: { icon: Download, label: 'Vault exported', color: '#6366f1' },
+  VAULT_IMPORTED: { icon: Upload, label: 'Vault imported', color: '#22c55e' },
 };
 
 export default function ActivityLog() {

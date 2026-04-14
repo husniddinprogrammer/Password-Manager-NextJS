@@ -335,11 +335,10 @@ function ExportSection() {
           style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
         >
           <option value="">Select credential</option>
-          {credentials
-            .filter((credential) => credential.scope === 'personal')
-            .map((credential) => (
+          {credentials.map((credential) => (
             <option key={credential.id} value={credential.id}>
               {credential.name}
+              {credential.scope === 'team' && credential.teamName ? ` (${credential.teamName})` : ''}
             </option>
           ))}
         </select>

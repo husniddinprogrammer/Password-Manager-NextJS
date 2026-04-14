@@ -6,8 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Wand2, X, Plus, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { CREDENTIAL_CATEGORIES, CredentialFormData } from '@/lib/types';
-import { useVault } from '@/context/VaultContext';
-import PasswordStrength from '@/components/UI/PasswordStrength';
+import { useVault } from '@/context/VaultContext';import PasswordStrength from '@/components/UI/PasswordStrength';
 import PasswordGenerator from './PasswordGenerator';
 
 // Defined OUTSIDE CredentialForm so its reference is stable across re-renders.
@@ -90,7 +89,7 @@ function FaviconPreview({ url }: { url: string }) {
 
 export default function CredentialForm({ initialData, credentialId, mode, initialScope, initialTeamId }: CredentialFormProps) {
   const router = useRouter();
-  const { addActivityLog, refreshCredentials } = useVault();
+  const { refreshCredentials } = useVault();
   const [form, setForm] = useState<CredentialFormData>({ ...EMPTY_FORM, ...initialData });
   const [showPassword, setShowPassword] = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
@@ -177,11 +176,6 @@ export default function CredentialForm({ initialData, credentialId, mode, initia
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Save failed');
 
-      await addActivityLog(
-        mode === 'edit' ? 'CREDENTIAL_UPDATED' : 'CREDENTIAL_CREATED',
-        data.data?.id,
-        form.name
-      );
       await refreshCredentials();
 
       toast.success(mode === 'edit' ? 'Credential updated!' : 'Credential saved!');

@@ -26,22 +26,27 @@ export default function LockScreen() {
 
   useEffect(() => {
     const init = async () => {
-      // If key already in sessionStorage → already unlocked, go to vault
-      if (sessionStorage.getItem('vault-unlocked')) {
-        router.replace('/vault');
-        return;
-      }
+      try {
+        // If key already in sessionStorage → already unlocked, go to vault
+        if (sessionStorage.getItem('vault-unlocked')) {
+          router.replace('/vault');
+          return;
+        }
 
-      const res = await fetch('/api/auth/check');
-      const data = await res.json();
+        const res = await fetch('/api/auth/check');
+        const data = await res.json();
 
-      if (!data.isAuthenticated) {
+        if (!data.isAuthenticated) {
+          router.replace('/login');
+          return;
+        }
+
+        setAuthUser(data.user as UserInfo);
+        setReady(true);
+      } catch {
+        // Network error — send to login so user can re-authenticate
         router.replace('/login');
-        return;
       }
-
-      setAuthUser(data.user as UserInfo);
-      setReady(true);
     };
     init();
   }, [router]);

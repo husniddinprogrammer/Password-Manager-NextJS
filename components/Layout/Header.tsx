@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -17,6 +17,11 @@ export default function Header({ searchQuery = '', onSearchChange, title }: Head
   const router = useRouter();
   const { lock } = useSession();
   const [localSearch, setLocalSearch] = useState(searchQuery);
+
+  // Keep local state in sync when the parent resets the query (e.g. tab change)
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
 
   const handleSearch = (value: string) => {
     setLocalSearch(value);
