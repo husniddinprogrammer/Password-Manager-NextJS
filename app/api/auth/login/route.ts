@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { createToken, setSessionCookie } from '@/lib/auth';
+import { rateLimit, resetRateLimit } from '@/lib/server/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +16,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'identifier and masterPassword are required' },
         { status: 400 }
+      );
+    }
+
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    if (!rateLimit(`login:${ip}`, 10, 15 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please try again later.' },
+        { status: 429 }
       );
     }
 
@@ -37,6 +46,8 @@ export async function POST(request: NextRequest) {
     if (!isValid) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
+
+    resetRateLimit(`login:${ip}`);
 
     try {
       await prisma.activityLog.create({

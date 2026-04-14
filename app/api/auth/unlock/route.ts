@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { createToken, requireAuth, setSessionCookie } from '@/lib/auth';
+import { rateLimit, resetRateLimit } from '@/lib/server/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +14,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Master password is required' }, { status: 400 });
     }
 
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    if (!rateLimit(`unlock:${session.userId}:${ip}`, 10, 15 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: 'Too many unlock attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const user = await prisma.user.findUnique({ where: { id: session.userId } });
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -22,6 +31,8 @@ export async function POST(request: NextRequest) {
     if (!isValid) {
       return NextResponse.json({ error: 'Invalid master password' }, { status: 401 });
     }
+
+    resetRateLimit(`unlock:${session.userId}:${ip}`);
 
     await prisma.activityLog.create({
       data: {

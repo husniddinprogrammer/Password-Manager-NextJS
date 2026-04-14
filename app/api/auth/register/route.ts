@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { createToken, setSessionCookie } from '@/lib/auth';
+import { rateLimit } from '@/lib/server/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +13,14 @@ export async function POST(request: NextRequest) {
       displayName?: string;
       masterPassword?: string;
     };
+
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    if (!rateLimit(`register:${ip}`, 5, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: 'Too many registration attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
 
     if (!username || !email || !masterPassword) {
       return NextResponse.json(
