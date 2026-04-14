@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
 import zxcvbn from 'zxcvbn';
 import {
-  decryptCredentialFields,
+  maybeDecryptField,
   encryptCredentialFields,
   passwordFingerprint,
 } from '@/lib/server/credential-crypto';
@@ -42,11 +42,12 @@ export async function GET(request: NextRequest) {
 
     const result = await Promise.all(
       credentials.map(async (c) => {
-        const decrypted = decryptCredentialFields({
-          username: c.username,
-          password: c.password,
-          notes: c.notes,
-        });
+        // maybeDecryptField handles both new (GCM-wrapped) and old (plain CBC) formats gracefully
+        const decrypted = {
+          username: maybeDecryptField(c.username),
+          password: maybeDecryptField(c.password),
+          notes: c.notes ? maybeDecryptField(c.notes) : null,
+        };
 
         let canEdit = c.userId === session.userId;
         if (c.scope === 'team' && c.teamId) {
@@ -182,7 +183,9 @@ export async function POST(request: NextRequest) {
       {
         data: {
           ...credential,
-          ...decryptCredentialFields(credential),
+          username: maybeDecryptField(credential.username),
+          password: maybeDecryptField(credential.password),
+          notes: credential.notes ? maybeDecryptField(credential.notes) : null,
           isReused: reusedCount > 0,
           canEdit: credScope === 'team' ? !!teamAccess && canManageCredential(teamAccess.role) : true,
           strength,

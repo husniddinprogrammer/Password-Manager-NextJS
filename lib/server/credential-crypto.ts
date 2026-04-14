@@ -50,6 +50,16 @@ export function decryptField(payload: string): string {
   return decrypted.toString('utf8');
 }
 
+export function maybeDecryptField(value: string | null | undefined): string {
+  if (!value) return '';
+
+  try {
+    return decryptField(value);
+  } catch {
+    return value;
+  }
+}
+
 export function encryptCredentialFields(input: {
   username: string;
   password: string;

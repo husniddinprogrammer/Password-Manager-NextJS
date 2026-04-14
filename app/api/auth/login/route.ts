@@ -18,10 +18,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find by username OR email
+    // Find by username (exact) OR email (case-insensitive)
     const user = await prisma.user.findFirst({
       where: {
-        OR: [{ username: identifier }, { email: identifier }],
+        OR: [
+          { username: identifier },
+          { email: { equals: identifier, mode: 'insensitive' } },
+        ],
       },
     });
 
@@ -35,9 +38,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    await prisma.activityLog.create({
-      data: { userId: user.id, action: 'VAULT_UNLOCKED' },
-    });
+    try {
+      await prisma.activityLog.create({
+        data: { userId: user.id, action: 'VAULT_UNLOCKED' },
+      });
+    } catch { /* non-critical */ }
 
     const token = await createToken(user.id);
     await setSessionCookie(token);

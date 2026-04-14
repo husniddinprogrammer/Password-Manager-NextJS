@@ -105,7 +105,12 @@ export default function CredentialForm({ initialData, credentialId, mode, initia
     fetch('/api/teams')
       .then((r) => r.json())
       .then(({ data }) => {
-        if (Array.isArray(data)) setTeams(data.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name })));
+        if (Array.isArray(data))
+          setTeams(
+            (data as { id: string; name: string; isOwner: boolean }[])
+              .filter((t) => t.isOwner)
+              .map((t) => ({ id: t.id, name: t.name }))
+          );
       })
       .catch(() => {});
   }, []);

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Key,
   Download,
+  Upload,
   Clock,
   Trash2,
   Eye,
@@ -360,6 +361,92 @@ function ExportSection() {
   );
 }
 
+function ImportSection() {
+  const { refreshCredentials } = useVault();
+  const [isImporting, setIsImporting] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState('');
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const isJsonFile =
+      file.type === 'application/json' ||
+      file.name.toLowerCase().endsWith('.json');
+
+    if (!isJsonFile) {
+      toast.error('Faqat JSON fayl import qilinadi.');
+      event.target.value = '';
+      setSelectedFileName('');
+      return;
+    }
+
+    setSelectedFileName(file.name);
+    setIsImporting(true);
+
+    try {
+      const text = await file.text();
+      let payload: unknown;
+
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        throw new Error('Fayl JSON formatda emas.');
+      }
+
+      const res = await fetch('/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Import failed');
+
+      await refreshCredentials();
+
+      const { created, updated, skipped } = data.data ?? {};
+      toast.success(`Import yakunlandi: ${created ?? 0} qo'shildi, ${updated ?? 0} yangilandi, ${skipped ?? 0} o'tkazib yuborildi.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Import failed');
+    } finally {
+      setIsImporting(false);
+      event.target.value = '';
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+        JSON fayl import qiling. Mos credential topilsa yangilanadi, topilmasa qo&apos;shiladi.
+      </p>
+      <label
+        className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer transition-colors"
+        style={{
+          background: 'var(--card)',
+          color: '#6366f1',
+          border: '1px solid rgba(99,102,241,0.2)',
+        }}
+      >
+        {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+        {isImporting ? 'Importing...' : 'Import JSON'}
+        <input
+          type="file"
+          accept=".json,application/json"
+          onChange={handleImport}
+          className="hidden"
+          disabled={isImporting}
+        />
+      </label>
+      {selectedFileName && (
+        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+          Selected: {selectedFileName}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function DangerZoneSection() {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
@@ -501,6 +588,10 @@ export default function SettingsPage() {
 
             <Section icon={Download} title="Export Vault" description="Download an encrypted backup of your vault.">
               <ExportSection />
+            </Section>
+
+            <Section icon={Upload} title="Import Vault" description="Import credentials from a JSON file.">
+              <ImportSection />
             </Section>
 
             <Section icon={Activity} title="Activity Log" description="Audit trail of recent vault actions.">

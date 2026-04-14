@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { Eye, EyeOff, Edit, Trash2, AlertTriangle, Globe, Users } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff, Edit, Trash2, AlertTriangle, Globe, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DecryptedCredential } from '@/lib/types';
 import CopyButton from '@/components/UI/CopyButton';
@@ -60,17 +60,21 @@ export default function CredentialCard({ credential, onDelete }: CredentialCardP
   const { addActivityLog } = useVault();
   const [showPassword, setShowPassword] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`Delete "${credential.name}"? This cannot be undone.`)) return;
+    setShowDeleteModal(true);
+  };
 
+  const confirmDelete = async () => {
     setIsDeleting(true);
     try {
       const res = await fetch(`/api/credentials/${credential.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Delete failed');
       toast.success(`"${credential.name}" deleted`);
+      setShowDeleteModal(false);
       onDelete(credential.id);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete');
@@ -264,6 +268,90 @@ export default function CredentialCard({ credential, onDelete }: CredentialCardP
           {!credential.canEdit ? 'No access' : isDeleting ? 'Deleting...' : 'Delete'}
         </motion.button>
       </div>
+
+      <AnimatePresence>
+        {showDeleteModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !isDeleting) setShowDeleteModal(false);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.92, opacity: 0 }}
+              className="w-full max-w-sm rounded-2xl p-6"
+              style={{ background: 'var(--surface)', border: '1px solid rgba(239,68,68,0.3)' }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: 'rgba(239,68,68,0.1)' }}
+                  >
+                    <Trash2 className="w-4 h-4" style={{ color: '#ef4444' }} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      Delete credential?
+                    </h3>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                      This action cannot be undone.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !isDeleting && setShowDeleteModal(false)}
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div
+                className="rounded-xl px-4 py-3 mb-4"
+                style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+              >
+                <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
+                  Credential
+                </p>
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                  {credential.name}
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={isDeleting}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                  style={{ background: 'var(--card)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+                >
+                  Cancel
+                </button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  type="button"
+                  onClick={confirmDelete}
+                  disabled={isDeleting}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50"
+                  style={{ background: '#ef4444' }}
+                >
+                  {isDeleting ? <Trash2 className="w-4 h-4 animate-pulse" /> : <Trash2 className="w-4 h-4" />}
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
