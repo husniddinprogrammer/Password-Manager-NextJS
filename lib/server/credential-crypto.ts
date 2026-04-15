@@ -2,13 +2,32 @@ import crypto from 'node:crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
+const HKDF_INFO = Buffer.from('teamvault-credential-encryption-v1', 'utf8');
 
+/**
+ * Derives the active encryption key using HKDF-SHA-256.
+ * HKDF is the correct primitive for key derivation from a secret;
+ * the previous SHA-256 hash was not a proper KDF.
+ */
 function getCredentialKey(): Buffer {
   const secret = process.env.CREDENTIALS_SECRET;
   if (!secret) {
     throw new Error('CREDENTIALS_SECRET environment variable is required');
   }
+  return Buffer.from(
+    crypto.hkdfSync('sha256', Buffer.from(secret, 'utf8'), Buffer.alloc(0), HKDF_INFO, 32)
+  );
+}
 
+/**
+ * Legacy key used only during migration to re-encrypt old credentials.
+ * Do not use for new encryptions.
+ */
+export function getLegacyCredentialKey(): Buffer {
+  const secret = process.env.CREDENTIALS_SECRET;
+  if (!secret) {
+    throw new Error('CREDENTIALS_SECRET environment variable is required');
+  }
   return crypto.createHash('sha256').update(secret).digest();
 }
 
