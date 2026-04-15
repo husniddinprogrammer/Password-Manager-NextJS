@@ -13,6 +13,7 @@ import {
   canViewCredential,
   getTeamAccess,
 } from '@/lib/server/credential-permissions';
+import { credentialUpdateSchema, zodErrorMessage } from '@/lib/server/schemas';
 
 function getStrengthScore(password: string): number {
   return zxcvbn(password).score;
@@ -87,8 +88,6 @@ export async function PUT(
   try {
     const session = await requireAuth(request);
     const { id } = await context.params;
-    const body = await request.json();
-
     const existing = await prisma.credential.findFirst({
       where: { id },
     });
@@ -109,15 +108,11 @@ export async function PUT(
       return NextResponse.json({ error: 'Credential not found' }, { status: 404 });
     }
 
-    const { name, url, username, password, notes, category, tags } = body as {
-      name?: string;
-      url?: string;
-      username?: string;
-      password?: string;
-      notes?: string;
-      category?: string;
-      tags?: string[];
-    };
+    const parsed = credentialUpdateSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: zodErrorMessage(parsed.error) }, { status: 400 });
+    }
+    const { name, url, username, password, notes, category, tags } = parsed.data;
 
     const nextUsername = username ?? maybeDecryptField(existing.username);
     const nextPassword = password ?? maybeDecryptField(existing.password);

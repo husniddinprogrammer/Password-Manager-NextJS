@@ -11,6 +11,7 @@ import {
   canManageCredential,
   getTeamAccess,
 } from '@/lib/server/credential-permissions';
+import { credentialCreateSchema, zodErrorMessage } from '@/lib/server/schemas';
 
 function getStrengthScore(password: string): number {
   return zxcvbn(password).score;
@@ -96,26 +97,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth(request);
-    const body = await request.json();
-
-    const { name, url, username, password, notes, category, tags, scope, teamId } = body as {
-      name?: string;
-      url?: string;
-      username?: string;
-      password?: string;
-      notes?: string;
-      category?: string;
-      tags?: string[];
-      scope?: string;
-      teamId?: string;
-    };
-
-    if (!name || !username || !password) {
-      return NextResponse.json(
-        { error: 'name, username, and password are required' },
-        { status: 400 }
-      );
+    const parsed = credentialCreateSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: zodErrorMessage(parsed.error) }, { status: 400 });
     }
+    const { name, url, username, password, notes, category, tags, scope, teamId } = parsed.data;
 
     const strength = getStrengthScore(password);
     if (strength < 2) {

@@ -3,16 +3,16 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { createToken, requireAuth, setSessionCookie } from '@/lib/auth';
 import { rateLimit, resetRateLimit } from '@/lib/server/rate-limit';
+import { unlockSchema, zodErrorMessage } from '@/lib/server/schemas';
 
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth(request);
-    const body = await request.json();
-    const { masterPassword } = body as { masterPassword?: string };
-
-    if (!masterPassword) {
-      return NextResponse.json({ error: 'Master password is required' }, { status: 400 });
+    const parsed = unlockSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: zodErrorMessage(parsed.error) }, { status: 400 });
     }
+    const { masterPassword } = parsed.data;
 
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
     if (!rateLimit(`unlock:${session.userId}:${ip}`, 10, 15 * 60 * 1000)) {
