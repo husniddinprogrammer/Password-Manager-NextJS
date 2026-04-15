@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth';
 import zxcvbn from 'zxcvbn';
 import {
   maybeDecryptField,
+  decryptField,
   encryptCredentialFields,
   passwordFingerprint,
 } from '@/lib/server/credential-crypto';
@@ -169,9 +170,9 @@ export async function POST(request: NextRequest) {
       {
         data: {
           ...credential,
-          username: maybeDecryptField(credential.username),
-          password: maybeDecryptField(credential.password),
-          notes: credential.notes ? maybeDecryptField(credential.notes) : null,
+          username: decryptField(credential.username),
+          password: decryptField(credential.password),
+          notes: credential.notes ? decryptField(credential.notes) : null,
           isReused: reusedCount > 0,
           canEdit: credScope === 'team' ? !!teamAccess && canManageCredential(teamAccess.role) : true,
           strength,

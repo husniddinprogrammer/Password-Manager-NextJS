@@ -69,12 +69,21 @@ export function decryptField(payload: string): string {
   return decrypted.toString('utf8');
 }
 
+/**
+ * Attempts GCM decryption; falls back to the raw value for import/legacy paths.
+ * Logs a warning on fallback — if you see this in production after the key
+ * migration it may indicate a tampered or otherwise corrupt record.
+ */
 export function maybeDecryptField(value: string | null | undefined): string {
   if (!value) return '';
 
   try {
     return decryptField(value);
   } catch {
+    console.warn(
+      '[credential-crypto] maybeDecryptField: GCM decryption failed — ' +
+        'returning raw value. Possible tampered or pre-migration record.'
+    );
     return value;
   }
 }

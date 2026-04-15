@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 
 // Provide a test secret before importing the module
 beforeAll(() => {
@@ -48,9 +48,13 @@ describe('maybeDecryptField', () => {
     expect(maybeDecryptField(ct)).toBe('hello');
   });
 
-  it('returns the original string when decryption fails (legacy plaintext)', async () => {
+  it('returns the original string and warns when decryption fails (legacy plaintext)', async () => {
     const { maybeDecryptField } = await getCrypto();
-    expect(maybeDecryptField('plaintext-value')).toBe('plaintext-value');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const result = maybeDecryptField('plaintext-value');
+    expect(result).toBe('plaintext-value');
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('GCM decryption failed'));
+    warnSpy.mockRestore();
   });
 
   it('returns empty string for null/undefined', async () => {

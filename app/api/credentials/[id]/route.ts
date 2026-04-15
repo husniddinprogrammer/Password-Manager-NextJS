@@ -4,7 +4,7 @@ import { requireAuth } from '@/lib/auth';
 import zxcvbn from 'zxcvbn';
 import {
   decryptCredentialFields,
-  maybeDecryptField,
+  decryptField,
   encryptCredentialFields,
   passwordFingerprint,
 } from '@/lib/server/credential-crypto';
@@ -114,9 +114,9 @@ export async function PUT(
     }
     const { name, url, username, password, notes, category, tags } = parsed.data;
 
-    const nextUsername = username ?? maybeDecryptField(existing.username);
-    const nextPassword = password ?? maybeDecryptField(existing.password);
-    const nextNotes = notes !== undefined ? notes || '' : maybeDecryptField(existing.notes ?? '');
+    const nextUsername = username ?? decryptField(existing.username);
+    const nextPassword = password ?? decryptField(existing.password);
+    const nextNotes = notes !== undefined ? notes || '' : decryptField(existing.notes ?? '');
     const strength = getStrengthScore(nextPassword);
 
     if (strength < 2) {
