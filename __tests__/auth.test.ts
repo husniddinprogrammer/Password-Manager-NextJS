@@ -1,8 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-
-beforeAll(() => {
-  process.env.JWT_SECRET = 'test-jwt-secret-long-enough-for-hs256-signing!!';
-});
+import { describe, it, expect } from 'vitest';
 
 const getAuth = () => import('../lib/auth');
 
@@ -35,7 +31,7 @@ describe('createToken / verifyToken', () => {
   });
 
   it('throws on invalid payload (missing userId)', async () => {
-    const { createToken, verifyToken } = await getAuth();
+    const { verifyToken } = await getAuth();
     // Craft a token where userId is a number instead of string
     const { SignJWT } = await import('jose');
     const secret = new TextEncoder().encode(process.env.JWT_SECRET!);

@@ -1,9 +1,4 @@
-import { describe, it, expect, beforeAll, vi } from 'vitest';
-
-// Provide a test secret before importing the module
-beforeAll(() => {
-  process.env.CREDENTIALS_SECRET = 'test-secret-that-is-long-enough-for-hkdf-32-bytes!!';
-});
+import { describe, it, expect, vi } from 'vitest';
 
 // Dynamic import so env is set before module-level code runs
 const getCrypto = () => import('../lib/server/credential-crypto');
