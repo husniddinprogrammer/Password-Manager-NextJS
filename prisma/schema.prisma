@@ -11,7 +11,7 @@ model User {
   username     String?       @unique
   email        String?       @unique
   displayName  String?
-  role         String        @default("member")
+  role         UserRole      @default(member)
   masterHash   String
   createdAt    DateTime      @default(now())
   credentials  Credential[]
@@ -21,32 +21,39 @@ model User {
 }
 
 model Credential {
-  id        String   @id @default(cuid())
-  userId    String
-  name      String
-  url       String?
-  username  String
-  password  String
+  id           String          @id @default(cuid())
+  userId       String
+  name         String
+  url          String?
+  username     String
+  password     String
   passwordHash String?
-  notes     String?
-  category  String   @default("General")
-  tags      String[]
-  scope     String   @default("personal")
-  teamId    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  team      Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  notes        String?
+  category     String          @default("General")
+  tags         String[]
+  scope        CredentialScope @default(personal)
+  teamId       String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team         Team?           @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([scope])
+  @@index([passwordHash])
 }
 
 model ActivityLog {
-  id           String   @id @default(cuid())
+  id           String         @id @default(cuid())
   userId       String
-  action       String
+  action       ActivityAction
   credentialId String?
   credName     String?
-  timestamp    DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timestamp    DateTime       @default(now())
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([timestamp])
 }
 
 model Team {
@@ -75,4 +82,28 @@ model TeamMember {
 enum TeamRole {
   OWNER
   MEMBER
+}
+
+enum UserRole {
+  admin
+  member
+}
+
+enum CredentialScope {
+  personal
+  team
+}
+
+enum ActivityAction {
+  CREDENTIAL_CREATED
+  CREDENTIAL_UPDATED
+  CREDENTIAL_DELETED
+  CREDENTIAL_VIEWED
+  PASSWORD_COPIED
+  USERNAME_COPIED
+  VAULT_UNLOCKED
+  VAULT_LOCKED
+  MASTER_PASSWORD_CHANGED
+  VAULT_EXPORTED
+  VAULT_IMPORTED
 }

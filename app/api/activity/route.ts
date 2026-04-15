@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
 import { ActivityAction } from '@/lib/types';
+import { ActivityAction as PrismaActivityAction } from '@prisma/client';
 
 const ALLOWED_ACTIONS = new Set<ActivityAction>([
   'CREDENTIAL_CREATED',
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
     const log = await prisma.activityLog.create({
       data: {
         userId: session.userId,
-        action,
+        action: action as PrismaActivityAction,
         credentialId: credentialId || null,
         credName: credName || null,
       },
