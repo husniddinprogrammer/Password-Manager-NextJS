@@ -22,14 +22,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find by username (exact) OR email (case-insensitive)
     const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { username: identifier },
-          { email: { equals: identifier, mode: 'insensitive' } },
-        ],
-      },
+      where: { email: { equals: identifier, mode: 'insensitive' } },
     });
 
     if (!user) {

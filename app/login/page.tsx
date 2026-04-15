@@ -95,15 +95,15 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                  Username or Email
+                  Email
                 </label>
                 <input
-                  type="text"
+                  type="email"
                   value={identifier}
                   onChange={(e) => { setIdentifier(e.target.value); setError(''); }}
-                  placeholder="username or email@example.com"
+                  placeholder="email@example.com"
                   autoFocus
-                  autoComplete="username"
+                  autoComplete="email"
                   className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors"
                   style={{
                     background: 'var(--card)',
