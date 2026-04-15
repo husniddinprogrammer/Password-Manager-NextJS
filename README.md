@@ -2,6 +2,8 @@
 
 A production-grade, self-hosted password manager built for companies that need to share credentials across teams — without passing passwords through Slack, Telegram, or sticky notes.
 
+**Live demo:** [password-manager-mauve-seven.vercel.app](https://password-manager-mauve-seven.vercel.app)
+
 ---
 
 ## Product Brief
@@ -109,8 +111,8 @@ Run it twice — once for `JWT_SECRET`, once for `CREDENTIALS_SECRET`.
 ### 3. Set up the database
 
 ```bash
-npx prisma migrate deploy
-npx prisma generate
+npx prisma migrate deploy   # apply all migrations
+npx prisma generate         # generate the Prisma client
 ```
 
 ### 4. Start the dev server
@@ -144,6 +146,10 @@ npm i -g vercel
 vercel
 ```
 
+When prompted:
+- **Link to existing project?** → `No` — create a new project
+- **Pull environment variables?** → `No` — you will add them manually in step 3
+
 Or connect your GitHub repo at [vercel.com/new](https://vercel.com/new).
 
 ### 3. Set environment variables in Vercel
@@ -167,6 +173,8 @@ DATABASE_URL="<your-neon-url>" npx prisma migrate deploy
 ```bash
 vercel --prod
 ```
+
+> `prisma generate` runs automatically as part of the build step — no need to run it manually on Vercel.
 
 ---
 
