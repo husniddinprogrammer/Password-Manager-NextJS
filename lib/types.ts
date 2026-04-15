@@ -22,7 +22,7 @@ export interface Credential {
   url?: string | null;
   username: string;
   password: string;
-  passwordHash?: string | null;
+  passwordFingerprint?: string | null;
   notes?: string | null;
   category: string;
   tags: string[];

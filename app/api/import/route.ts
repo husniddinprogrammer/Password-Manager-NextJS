@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
         password: normalized.password,
         notes: normalized.notes,
       });
-      const passwordHash = passwordFingerprint(normalized.password);
+      const fingerprint = passwordFingerprint(normalized.password);
 
       const match = existingNormalized.find(({ credential, username, password }) => {
         const sameScope =
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
             url: normalized.url,
             username: encrypted.username,
             password: encrypted.password,
-            passwordHash,
+            passwordFingerprint: fingerprint,
             notes: encrypted.notes,
             category: normalized.category,
             tags: normalized.tags,
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
           url: normalized.url,
           username: encrypted.username,
           password: encrypted.password,
-          passwordHash,
+          passwordFingerprint: fingerprint,
           notes: encrypted.notes,
           category: normalized.category,
           tags: normalized.tags,

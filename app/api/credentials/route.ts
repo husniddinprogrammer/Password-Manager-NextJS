@@ -70,18 +70,18 @@ export async function GET(request: NextRequest) {
 
     const scopedCounts = new Map<string, number>();
     result.forEach((c) => {
-      if (!c.passwordHash) return;
+      if (!c.passwordFingerprint) return;
       const scopeKey = c.scope === 'team' && c.teamId ? `team:${c.teamId}` : `user:${c.userId}`;
-      const key = `${scopeKey}:${c.passwordHash}`;
+      const key = `${scopeKey}:${c.passwordFingerprint}`;
       scopedCounts.set(key, (scopedCounts.get(key) ?? 0) + 1);
     });
 
     const withReuse = result.map((c) => {
       const scopeKey = c.scope === 'team' && c.teamId ? `team:${c.teamId}` : `user:${c.userId}`;
-      const key = c.passwordHash ? `${scopeKey}:${c.passwordHash}` : '';
+      const key = c.passwordFingerprint ? `${scopeKey}:${c.passwordFingerprint}` : '';
       return {
         ...c,
-        isReused: !!(c.passwordHash && (scopedCounts.get(key) ?? 0) > 1),
+        isReused: !!(c.passwordFingerprint && (scopedCounts.get(key) ?? 0) > 1),
       };
     });
 
@@ -130,11 +130,11 @@ export async function POST(request: NextRequest) {
       password,
       notes: notes || null,
     });
-    const passwordHash = passwordFingerprint(password);
+    const fingerprint = passwordFingerprint(password);
 
     const reusedCount = await prisma.credential.count({
       where: {
-        passwordHash,
+        passwordFingerprint: fingerprint,
         ...(credScope === 'team' && teamId
           ? { teamId, scope: 'team' }
           : { userId: session.userId, scope: 'personal' }),
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
         url: url || null,
         username: encrypted.username,
         password: encrypted.password,
-        passwordHash,
+        passwordFingerprint: fingerprint,
         notes: encrypted.notes,
         category: category || 'General',
         tags: tags || [],

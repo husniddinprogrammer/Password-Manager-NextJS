@@ -139,7 +139,7 @@ export async function PUT(
         url: url !== undefined ? url || null : existing.url,
         username: encrypted.username,
         password: encrypted.password,
-        passwordHash: passwordFingerprint(nextPassword),
+        passwordFingerprint: passwordFingerprint(nextPassword),
         notes: encrypted.notes,
         category: category ?? existing.category,
         tags: tags ?? existing.tags,

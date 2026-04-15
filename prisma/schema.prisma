@@ -27,7 +27,7 @@ model Credential {
   url          String?
   username     String
   password     String
-  passwordHash String?
+  passwordFingerprint String?
   notes        String?
   category     String          @default("General")
   tags         String[]
@@ -40,7 +40,7 @@ model Credential {
 
   @@index([userId])
   @@index([scope])
-  @@index([passwordHash])
+  @@index([passwordFingerprint])
 }
 
 model ActivityLog {
