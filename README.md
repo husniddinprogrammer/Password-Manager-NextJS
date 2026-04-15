@@ -2,7 +2,11 @@
 
 A production-grade, self-hosted password manager built for companies that need to share credentials across teams — without passing passwords through Slack, Telegram, or sticky notes.
 
-**Live demo:** [password-manager-mauve-seven.vercel.app](https://password-manager-mauve-seven.vercel.app)
+**Live demo:** [password-manager-nine-gold.vercel.app](https://password-manager-nine-gold.vercel.app)
+
+**Screen recording:**
+- [Part 1 — Register, unlock, add credential, password generator](https://www.loom.com/share/8066f7db8f154b639de764d7298c1df7)
+- [Part 2 — Search, teams, audit log, lock](https://www.loom.com/share/3886ccfcf8704a9188601d0a6e254719)
 
 ---
 
