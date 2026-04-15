@@ -282,10 +282,10 @@ export default function TeamDetailPage() {
                   </h2>
                   <form onSubmit={handleInvite} className="flex gap-2">
                     <input
-                      type="text"
+                      type="email"
                       value={inviteIdentifier}
                       onChange={(e) => setInviteIdentifier(e.target.value)}
-                      placeholder="Username or email"
+                      placeholder="Email address"
                       autoFocus
                       className="flex-1 px-4 py-2.5 rounded-xl text-sm focus:outline-none"
                       style={inputStyle}

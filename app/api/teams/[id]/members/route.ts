@@ -47,8 +47,12 @@ export async function POST(
     const { id: teamId } = await params;
     const { identifier, role = 'MEMBER' } = await request.json() as { identifier?: string; role?: string };
 
-    if (!identifier?.trim()) {
-      return NextResponse.json({ error: 'Username or email is required' }, { status: 400 });
+    const email = identifier?.trim().toLowerCase();
+    if (!email) {
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
     }
 
     const team = await prisma.team.findUnique({ where: { id: teamId } });
@@ -57,16 +61,11 @@ export async function POST(
     }
 
     const targetUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { username: identifier.trim() },
-          { email: identifier.trim() },
-        ],
-      },
+      where: { email: { equals: email, mode: 'insensitive' } },
     });
 
     if (!targetUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: 'No user found with that email' }, { status: 404 });
     }
 
     if (targetUser.id === session.userId) {
